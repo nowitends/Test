@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizualizacja Stycznej do Funkcji</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f3f4f6;
+        }
+        canvas {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            cursor: crosshair;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6">
+        <h1 class="text-2xl font-bold text-gray-800 mb-2">Wizualizacja Stycznej do Funkcji</h1>
+        <p class="text-gray-600 mb-6 text-sm">Przesuwaj suwak lub najeżdżaj myszką na wykres, aby zobaczyć styczną w danym punkcie.</p>
+
+        <!-- Controls -->
+        <div class="flex flex-wrap gap-4 mb-4 items-center justify-between">
+            <div class="flex items-center gap-2">
+                <label for="functionSelect" class="font-semibold text-gray-700">Wybierz funkcję:</label>
+                <select id="functionSelect" class="p-2 border rounded-md bg-gray-50 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="quadratic">Parabola: f(x) = 0.5x² - 2</option>
+                    <option value="cubic">Wielomian 3 st.: f(x) = 0.1x³ - x</option>
+                    <option value="sine">Sinusoida: f(x) = 2sin(x/2)</option>
+                    <option value="complex">Mieszana: f(x) = sin(x) + cos(0.5x)</option>
+                </select>
+            </div>
+            
+            <div class="flex flex-col items-end">
+                <div class="text-sm font-mono bg-gray-100 p-2 rounded text-right">
+                    <div>x = <span id="valX" class="font-bold text-blue-600">0.00</span></div>
+                    <div>f(x) = <span id="valY" class="font-bold text-blue-600">0.00</span></div>
+                    <div>Pochodna (nachylenie) = <span id="valSlope" class="font-bold text-red-600">0.00</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="relative w-full aspect-[16/9] border border-gray-200 rounded-lg overflow-hidden bg-white mb-4">
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- Slider Control -->
+        <div class="w-full px-2">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Pozycja X</label>
+            <input type="range" id="xSlider" min="-10" max="10" step="0.01" value="0" 
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+            <div class="flex justify-between text-xs text-gray-400 mt-1">
+                <span>-10</span>
+                <span>0</span>
+                <span>10</span>
+            </div>
+        </div>
+        
+        <div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800">
+            <p><strong>Definicja:</strong> Styczna to prosta, która "dotyka" krzywej w jednym punkcie i ma to samo nachylenie co funkcja w tym punkcie. Nachylenie to (współczynnik kierunkowy) jest równe wartości pochodnej funkcji $f'(x)$.</p>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const slider = document.getElementById('xSlider');
+        const select = document.getElementById('functionSelect');
+        const valX = document.getElementById('valX');
+        const valY = document.getElementById('valY');
+        const valSlope = document.getElementById('valSlope');
+
+        // Configuration
+        const scale = 40; // Pixels per unit
+        let width, height, originX, originY;
+        let currentX = 0;
+
+        // Mathematical Functions and their Derivatives
+        const mathFunctions = {
+            quadratic: {
+                f: (x) => 0.5 * x * x - 2,
+                df: (x) => 1.0 * x
+            },
+            cubic: {
+                f: (x) => 0.1 * Math.pow(x, 3) - x,
+                df: (x) => 0.3 * Math.pow(x, 2) - 1
+            },
+            sine: {
+                f: (x) => 2 * Math.sin(x / 2),
+                df: (x) => Math.cos(x / 2) // Chain rule: 2 * cos(x/2) * 1/2 = cos(x/2)
+            },
+            complex: {
+                f: (x) => Math.sin(x) + Math.cos(0.5 * x),
+                df: (x) => Math.cos(x) - 0.5 * Math.sin(0.5 * x)
+            }
+        };
+
+        let activeFunc = mathFunctions.quadratic;
+
+        // Resize Canvas
+        function resize() {
+            const parent = canvas.parentElement;
+            canvas.width = parent.clientWidth;
+            canvas.height = parent.clientHeight;
+            width = canvas.width;
+            height = canvas.height;
+            originX = width / 2;
+            originY = height / 2;
+            draw();
+        }
+
+        // Coordinate Conversion
+        function toCanvasX(x) {
+            return originX + x * scale;
+        }
+
+        function toCanvasY(y) {
+            return originY - y * scale; // Invert Y because canvas Y grows downwards
+        }
+
+        function toMathX(px) {
+            return (px - originX) / scale;
+        }
+
+        // Draw Loop
+        function draw() {
+            // Clear
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw Grid
+            drawGrid();
+
+            // Draw Axes
+            drawAxes();
+
+            // Draw Function Curve
+            drawFunction();
+
+            // Draw Tangent Logic
+            drawTangentLine();
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#e5e7eb';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            
+            // Vertical lines
+            for (let x = 0; x <= width / 2; x += scale) {
+                // Right side
+                ctx.moveTo(originX + x, 0); ctx.lineTo(originX + x, height);
+                // Left side
+                ctx.moveTo(originX - x, 0); ctx.lineTo(originX - x, height);
+            }
+
+            // Horizontal lines
+            for (let y = 0; y <= height / 2; y += scale) {
+                // Down
+                ctx.moveTo(0, originY + y); ctx.lineTo(width, originY + y);
+                // Up
+                ctx.moveTo(0, originY - y); ctx.lineTo(width, originY - y);
+            }
+            ctx.stroke();
+        }
+
+        function drawAxes() {
+            ctx.strokeStyle = '#374151'; // Gray-700
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            
+            // X Axis
+            ctx.moveTo(0, originY);
+            ctx.lineTo(width, originY);
+            
+            // Y Axis
+            ctx.moveTo(originX, 0);
+            ctx.lineTo(originX, height);
+            
+            ctx.stroke();
+            
+            // Arrow heads (simplified)
+            ctx.fillStyle = '#374151';
+            ctx.font = "12px Arial";
+            ctx.fillText("X", width - 15, originY + 20);
+            ctx.fillText("Y", originX + 10, 15);
+        }
+
+        function drawFunction() {
+            ctx.strokeStyle = '#2563eb'; // Blue-600
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            let startX = -originX / scale;
+            let endX = (width - originX) / scale;
+
+            let first = true;
+            // Draw with small steps for smoothness
+            for (let x = startX; x <= endX; x += 0.05) {
+                let y = activeFunc.f(x);
+                let cx = toCanvasX(x);
+                let cy = toCanvasY(y);
+
+                if (first) {
+                    ctx.moveTo(cx, cy);
+                    first = false;
+                } else {
+                    ctx.lineTo(cx, cy);
+                }
+            }
+            ctx.stroke();
+        }
+
+        function drawTangentLine() {
+            const x0 = parseFloat(currentX);
+            const y0 = activeFunc.f(x0);
+            const slope = activeFunc.df(x0);
+
+            // Update UI Labels
+            valX.textContent = x0.toFixed(2);
+            valY.textContent = y0.toFixed(2);
+            valSlope.textContent = slope.toFixed(2);
+
+            // Tangent Equation: y - y0 = m(x - x0)  =>  y = m(x - x0) + y0
+            // We need to draw a line across the screen based on this slope.
+            // Let's pick points far to the left and right of the visible area.
+            
+            const range = 20; // Draw line long enough
+            const xStart = x0 - range;
+            const xEnd = x0 + range;
+            
+            const yStart = slope * (xStart - x0) + y0;
+            const yEnd = slope * (xEnd - x0) + y0;
+
+            // Draw Tangent Line
+            ctx.strokeStyle = '#dc2626'; // Red-600
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]); // Dashed line
+            ctx.beginPath();
+            ctx.moveTo(toCanvasX(xStart), toCanvasY(yStart));
+            ctx.lineTo(toCanvasX(xEnd), toCanvasY(yEnd));
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset dash
+
+            // Draw Point of Tangency
+            ctx.fillStyle = '#dc2626';
+            ctx.beginPath();
+            const cx = toCanvasX(x0);
+            const cy = toCanvasY(y0);
+            ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Tangent point glow
+            ctx.fillStyle = 'rgba(220, 38, 38, 0.2)';
+            ctx.beginPath();
+            ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Event Listeners
+        slider.addEventListener('input', (e) => {
+            currentX = e.target.value;
+            draw();
+        });
+
+        select.addEventListener('change', (e) => {
+            activeFunc = mathFunctions[e.target.value];
+            draw();
+        });
+
+        // Mouse Interaction
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mathX = toMathX(mouseX);
+            
+            // Clamp mathX to visible area or slider range
+            if(mathX >= -10 && mathX <= 10) {
+                currentX = mathX;
+                slider.value = currentX;
+                draw();
+            }
+        });
+
+        window.addEventListener('resize', resize);
+
+        // Init
+        resize(); // Initial draw
+
+    </script>
+</body>
+</html>
