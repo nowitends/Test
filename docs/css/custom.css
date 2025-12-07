@@ -1,0 +1,108 @@
+:root {
+  --brand-primary: #1b4b9a;
+  --brand-accent: #f6a623;
+  --brand-muted: #e9eef6;
+  --brand-surface: #ffffff;
+}
+
+[data-md-color-scheme="slate"] {
+  --brand-primary: #6cb2ff;
+  --brand-accent: #ffd666;
+  --brand-muted: #1b2333;
+  --brand-surface: #0f1624;
+}
+
+.md-header {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+}
+
+.md-typeset h1 {
+  letter-spacing: 0.01em;
+  border-bottom: 2px solid var(--md-primary-fg-color);
+  padding-bottom: 0.2rem;
+  margin-bottom: 1rem;
+}
+
+.md-typeset h2 {
+  margin-top: 1.8rem;
+  color: var(--md-primary-fg-color);
+}
+
+.md-typeset h3 {
+  font-weight: 600;
+  color: var(--md-accent-fg-color);
+}
+
+.md-typeset blockquote {
+  border-left: 4px solid var(--md-accent-fg-color);
+  background: var(--brand-muted);
+  color: inherit;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  background: #111827;
+}
+
+.md-typeset code {
+  background: rgba(0, 0, 0, 0.04);
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-md-color-scheme="slate"] .md-typeset code {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.md-typeset pre > code {
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+}
+
+.hero-card {
+  background: linear-gradient(120deg, var(--brand-primary), var(--brand-accent));
+  color: #fff;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.18);
+  margin: 1rem 0 1.5rem 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+.info-card {
+  background: var(--brand-surface);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.06);
+}
+
+[data-md-color-scheme="slate"] .info-card {
+  background: #161f2e;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+.info-card h3 {
+  margin-top: 0;
+  color: var(--md-primary-fg-color);
+}
+
+.callout {
+  border-left: 4px solid var(--md-primary-fg-color);
+  padding: 0.75rem 1rem;
+  background: var(--brand-muted);
+  border-radius: 10px;
+}
+
+[data-md-color-scheme="slate"] .callout {
+  background: #111827;
+}
